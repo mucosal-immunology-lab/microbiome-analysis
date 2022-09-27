@@ -258,7 +258,7 @@ otu_to_csv(bact_genus_logCSS, here::here('output', 'otu_tables', 'otu_table_bact
 
 ## Alpha diversity
 
-We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier, to investigate whether there are changes based on some sample metadata of our choosing. 
+We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier to investigate whether there are changes based on some sample metadata of our choosing. 
 
 The approach for this will be different depending on whether your metadata of interest is categorical or numerical, and how you want to split up your data (if at all &ndash; for example, you may have a numeric explanatory variable, but also a categorical grouping factor).
 
