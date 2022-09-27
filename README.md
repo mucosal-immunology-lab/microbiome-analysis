@@ -148,7 +148,7 @@ rm(list = c('otu_mat', 'tax_mat', 'samples_df', 'OTU', 'TAX'))
 
 ## Filtering and normalisation
 
-At this stage, we should now have a single, unified `phyloseq` object that contain all of our count data, taxonomic information, and sample metadata:
+At this stage, we should now have a single, unified `phyloseq` object that contains all of our count data, taxonomic information, and sample metadata:
 
 * `bact_data_raw`: the raw `phyloseq` object before filtering and normalisation (can be derived from either 16S rRNA amplicon or shotgun metagenomic sequencing data).
 
@@ -160,8 +160,8 @@ minreadsThreshold <- 10000 # originally set to 10000
 bact_data_samples <- prune_samples(colSums(otu_table(bact_data_raw)) > minreadsThreshold, bact_data_raw)
 
 # Filter out taxa based on a minimum number of reads [detectionThreshold] and prevalence [prevalenceThreshold]
-detectionThreshold <- 0 # originally set to 0
-prevalenceThreshold <- 0.1 # originally set to 0.1
+detectionThreshold <- 0 # originally set to 0 (i.e. 0 reads minimum)
+prevalenceThreshold <- 0.1 # originally set to 0.1 (i.e. found in 10% of samples)
 bact_data_filtered <- core(bact_data_samples,
                            detection = detectionThreshold,
                            prevalence = prevalenceThreshold,
@@ -258,4 +258,75 @@ otu_to_csv(bact_genus_logCSS, here::here('output', 'otu_tables', 'otu_table_bact
 
 ## Alpha diversity
 
-We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier, to investigate whether there are changes based on some sample metadata of our choosing.
+We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier, to investigate whether there are changes based on some sample metadata of our choosing. 
+
+The approach for this will be different depending on whether your metadata of interest is categorical or numerical, and how you want to split up your data (if at all &ndash; for example, you may have a numeric explanatory variable, but also a categorical grouping factor).
+
+### Example: longitudinal experiment with two groups
+
+Perhaps we have a longitudinal study where faecal samples have been taken from the same animals at five distinct time points, and the animals belong to one of two treatment groups, e.g. a Sham group and a drug treatment group.
+
+Firstly we may want to determine if there are changes from the baseline alpha diversity (timepoint `0`). One way we could investigate that is as follows:
+
+```r
+# Transform the sample data into a data.frame
+bact_data_samples <- data.frame(sample_data(bact_data_filtered))
+
+# Plot the diversity over time by group
+(bact_diversity_plot <- ggplot(bact_data_samples, aes(x = days_postTx, y = Diversity)) +
+    geom_path(aes(group = rat_id), col = 'grey70') + # draw a path between sample from the same animal
+    geom_violin(aes(y = Diversity, fill = group), scale = 'area') +
+    geom_dotplot(binaxis = 'y', stackdir = 'center', dotsize = 0.5, binwidth = 1/30 * diff(range(bact_data_samples$Diversity))) +
+    geom_boxplot(aes(y = Diversity, fill = group), width = 0.2) +
+    scale_fill_jama(alpha = 0.5, name = 'Treatment Group') +
+    guides(fill = 'none') +
+    labs(title = 'Bacterial Diversity (Shannon Index)',
+         x = 'Time Since Treatment (days)') +
+    facet_grid(cols = vars(group)) +
+    stat_compare_means(comparisons = list(c('0', '7'),
+                                          c('0', '14'),
+                                          c('0', '21'),
+                                          c('0', '28')))
+)
+```
+
+That would produce this plot:
+
+<p align="center">
+    <img src="./assets/bact_diversity_by_group.jpg" width=75%>
+</p>
+
+Alternatively, we may decide we want to look at whether the treatment affects alpha diversity between groups over time. For example, there may be some temporal element affecting alpha diversity that is independent of the treatment. This is easy to alter by changing the faceting variable, and removing the `geom_path()` element.
+
+```r
+# Transform the sample data into a data.frame
+bact_data_samples <- data.frame(sample_data(bact_data_filtered))
+
+# Prepare facet labels (more descriptive than the numbers alone)
+# We will use the labeller within facet_grid to use these labels
+facet_col_labels <- c('0' = '0 days post-Tx',
+                      '7' = '7 days post-Tx',
+                      '14' = '14 days post-Tx',
+                      '21' = '21 days post-Tx',
+                      '28' = '28 days post-Tx')
+
+# Plot the diversity over time between groups
+(bact_diversity_plot2 <- ggplot(bact_data_samples, aes(x = group, y = Diversity)) +
+    geom_violin(aes(y = Diversity, fill = group), scale = 'area') +
+    geom_dotplot(binaxis = 'y', stackdir = 'center', dotsize = 0.5, 
+                 binwidth = 1/30 * diff(range(bact_data_samples$Diversity))) +
+    geom_boxplot(aes(y = Diversity, fill = group), width = 0.2) +
+    scale_fill_jama(alpha = 0.5, name = 'Treatment Group') +
+    guides(fill = 'none') +
+    labs(title = 'Bacterial Diversity (Shannon Index)',
+         x = 'Treatment Group') +
+    facet_grid(cols = vars(days_postTx), scales = 'free', labeller = as_labeller(facet_col_labels)) +
+    stat_compare_means(comparisons = list(c('Sham', 'DrugXYZ')))
+)
+```
+
+That would produce this plot:
+
+<p align="center">
+    <img src="./assets/bact_diversity_by_time.jpg" width=75%>
+</p>
