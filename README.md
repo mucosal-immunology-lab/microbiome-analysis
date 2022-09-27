@@ -18,6 +18,9 @@ Here we will provide a selection of analytical tools and utilities for the proce
     - [Normalisation](#normalisation)
     - [Write OTU tables to `.csv` files](#write-otu-tables-to-csv-files)
     - [Data agglomeration](#data-agglomeration)
+  - [Alpha diversity](#alpha-diversity)
+    - [Example: longitudinal experiment with two groups](#example-longitudinal-experiment-with-two-groups)
+  - [Beta diversity](#beta-diversity)
 
 ## Processing of raw data
 
@@ -258,7 +261,7 @@ otu_to_csv(bact_genus_logCSS, here::here('output', 'otu_tables', 'otu_table_bact
 
 ## Alpha diversity
 
-We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier to investigate whether there are changes based on some sample metadata of our choosing. 
+Alpha diversity represents **within-sample** diversity. We can now make use of the Shannon diversity metric information we added to our phyloseq objects earlier to investigate whether there are changes based on some sample metadata of our choosing. 
 
 The approach for this will be different depending on whether your metadata of interest is categorical or numerical, and how you want to split up your data (if at all &ndash; for example, you may have a numeric explanatory variable, but also a categorical grouping factor).
 
@@ -288,6 +291,8 @@ bact_data_samples <- data.frame(sample_data(bact_data_filtered))
                                           c('0', '21'),
                                           c('0', '28')))
 )
+ggsave(here::here('figures', 'diversity', 'bact_diversity_by_group.pdf'), bact_diversity_plot,
+       width = 16, height = 12, units = 'cm')
 ```
 
 That would produce this plot:
@@ -323,6 +328,8 @@ facet_col_labels <- c('0' = '0 days post-Tx',
     facet_grid(cols = vars(days_postTx), scales = 'free', labeller = as_labeller(facet_col_labels)) +
     stat_compare_means(comparisons = list(c('Sham', 'DrugXYZ')))
 )
+ggsave(here::here('figures', 'diversity', 'bact_diversity_by_time.pdf'), bact_diversity_plot2,
+       width = 16, height = 12, units = 'cm')
 ```
 
 That would produce this plot:
@@ -330,3 +337,51 @@ That would produce this plot:
 <p align="center">
     <img src="./assets/bact_diversity_by_time.jpg" width=75%>
 </p>
+
+## Beta diversity
+
+Beta diversity represents **between-sample** diversity. Continuing on from our example above, because the taxonomic composition may vary greatly with time, if we were to plot ordination plots for all samples together, we may lose clarity and minimise resolution/separation of data points at each of the time points individually.
+
+In this example, the data came from 16S rRNA amplicon sequencing, so we have access to the *de novo* phylogenetic tree, and can use the UniFrac distance metric. UniFrac distances make use of the tree, by assigning short distances to a pair of ASVs that are highly similar, and larger distances to those that are more dissimilar.
+If however we were using a `phyloseq` derived from shotgun metagenomic sequencing data, we could use another distance metric, e.g. Bray-Curtis (`'bray'`).
+
+To save time and code, let's loop through the ordinations at each timepoint by creating temporary `phyloseq` subsets, add their plotted ordinations to a plot list, and finally combine the plots into a single figure with `ggarrange()`.
+
+*If you just have a single categorical variable however, you can make use of the plot code within the loop, i.e. `p <- plot_ordination()` etc.*
+
+```r
+# Choose parameters for downstream analyses
+met <- 'PCoA'
+dist <- 'unifrac'
+bact <- bact_data_logCSS
+
+# Bacterial ordination (separately for each temporal group)
+ord_list <- list() # blank list to hold ordination plots
+for (day in levels(bact@sam_data$days_postTx)) { # loop through the unique values of 'days_postTx' in the phyloseq sample_data()
+  bact_tmp <- prune_samples(bact@sam_data$days_postTx == day, bact) # create temporary subsets of the phyloseq object
+  
+  p <- plot_ordination(bact_tmp, ordinate(bact_tmp, met, dist, weighted = TRUE), # ordinate via the phyloseq plot_ordination() function
+                       title = paste0(day, ' days post-treatment')) +
+    stat_ellipse(aes(fill = group), geom = 'polygon', type = 't', level = 0.95, alpha = 0.2) + # add group ellipses
+    scale_shape_identity() +
+    geom_point(aes(fill = group), shape = 21, size = 3) + # add the individual data points
+    scale_fill_jama(name = 'Treatment Group') # scale the fill colour using ggsci scale_fill_jama() function
+  
+  ord_list[[day]] <- p # add the plot to the plot list
+}
+
+# Arrange ordination plots using ggpubr ggarrange() function
+ord_plots <- ggarrange(plotlist = ord_list, nrow = 2, ncol = 3, common.legend = TRUE)
+(ord_plots <- annotate_figure(ord_plots,
+                              top = text_grob(label = paste0('Bacteria ', met, ' ', dist, ' ordination'))))
+ggsave(here::here('figures', 'ordination', 'bact_PCoA_ordination_by_time.pdf'), ord_plots, # Save combined figure
+       width = 20, height = 16, units = 'cm')
+```
+
+The resulting output file looks like this:
+
+<div align="center">
+  <img src="./assets/bact_PCoA_ordination_by_time.jpeg" width = 75%>
+</div>
+
+## Taxonomic composition
