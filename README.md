@@ -35,6 +35,7 @@ Here we will provide a selection of analytical approaches, tools, and utilities 
     - [Splitting a phyloseq object for differential abundance analysis](#splitting-a-phyloseq-object-for-differential-abundance-analysis)
       - [Creating the master list](#creating-the-master-list)
       - [Looping through the master list to test for DA taxa](#looping-through-the-master-list-to-test-for-da-taxa)
+  - [Rights](#rights)
 
 ## Processing of raw data
 
