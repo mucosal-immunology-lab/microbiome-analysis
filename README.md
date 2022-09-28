@@ -482,6 +482,12 @@ The resulting output file looks like this:
 
 Say we now want to see whether there are bacteria that are differentially abundant according to a sample metadata variable we have available. Perhaps we have information about an individual's age at sampling, or we have some grouping information. This information can be input into a custom wrapper function around the popular `limma` package we provide here, called [`phyloseq_limma()`](./phyloseq_limma.R).
 
+The minimum required arguments for `phyloseq_limma()` are:
+
+- `phyloseq_object`
+- `model_formula_as_string` or `metadata_var`
+- `coefficients` (not required in using `metadata_var`)
+
 ### Arguments for `phyloseq_limma()`
 
 - `phyloseq_object`: a phyloseq object to use for differential abundance testing.
@@ -614,7 +620,6 @@ bact_time_split$limma_groupDA_ASV <- list() # create an empty list to store outp
 for (day in names(bact_time_split$input_data)) { # loop over the names in 'input_data', assigning each successively to the 'day' variable
   bact_phyloseq <- bact_time_split$input_data[[day]] # retrieve the appropriate phyloseq object
   limma_groupDA <- phyloseq_limma(phyloseq_object = bact_phyloseq,
-                                  tax_id_col = 'ID', # the ASV ID column is just 'ID'
                                   model_formula_as_string = '~ group',
                                   coefficients = 2,
                                   plot_output_folder = here::here('figures', 'limma_DA', 'treatment_group', 'ASV'), # output plots will be saved here
