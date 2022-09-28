@@ -413,7 +413,7 @@ col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_c
 
 ### Taxonomic barplot by group
 
-We will first plot the "average" barplot using a grouping variable. This could be a treatment group, time frame, etc. In this example, we will continue on with the drug treatment example from above, using the treatment as our grouping variable and also facet by time frame (by passing the `facet_col_labels` vector we created above to the `labeller` argument of `facet_grid()`).
+We will first plot the "average" barplot using a grouping variable. This could be a treatment group, time frame, etc. In this example, we will continue on with the drug treatment example from above, using the treatment as our grouping variable and also facet by time frame (correcting the facet labels by passing the `facet_col_labels` vector we created above to the `labeller` argument of `facet_grid()`).
 
 ```r
 # Plot taxonomic composition by group over time
