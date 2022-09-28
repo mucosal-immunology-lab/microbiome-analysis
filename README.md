@@ -21,6 +21,10 @@ Here we will provide a selection of analytical tools and utilities for the proce
   - [Alpha diversity](#alpha-diversity)
     - [Example: longitudinal experiment with two groups](#example-longitudinal-experiment-with-two-groups)
   - [Beta diversity](#beta-diversity)
+  - [Taxonomic composition](#taxonomic-composition)
+    - [Data preparation](#data-preparation)
+    - [Taxonomic barplot by group](#taxonomic-barplot-by-group)
+    - [Taxonomic composition by individual](#taxonomic-composition-by-individual)
 
 ## Processing of raw data
 
