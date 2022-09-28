@@ -470,3 +470,209 @@ The resulting output file looks like this:
 <div align="center">
   <img src="./assets/bact_taxonomy_gen_rat_by_time.jpg" width = 75%>
 </div>
+
+## Limma wrapper function for differential abundance testing
+
+Say we now want to see whether there are bacteria that are differentially abundant according to a sample metadata variable we have available. Perhaps we have information about an individual's age at sampling, or we have some grouping information. This information can be input into a custom wrapper function around the popular `limma` package we provide here, called [`phyloseq_limma()`](./phyloseq_limma.R).
+
+### Arguments for `phyloseq_limma()`
+
+- `phyloseq_object`: a phyloseq object to use for differential abundance testing.
+- `metadata_var`: optional - the name of a **single** column from the `sample_data` to use for DA testing (e.g. `metadata_var = 'group'`). **NOT** required if providing a formula - it will be changed to `NULL` if `model_formula_as_string` is also provided.
+- `metadata_condition`: optional - a conditional statement about a certain metadata value, e.g. keeping a certain age group only.
+- `model_matrix`: optional - best to let the function create the model matrix for you.
+- `model_formula_as_string`: just like it sounds - a string containing the model formula you want to use (only works with '+' and not '*' at this stage).
+- `use_contrast_matrix`: a boolean selector for whether to use the contrast matrix or a selected coefficient - the function should select the correct option.
+- `coefficients`: selection of coefficient(s) you want to be tested. This will depend on the order of variables in the formula, and you can select as many as you'd like (e.g. `coefficients = 2`, or `coefficients = 3:4`).
+- `factor_reorder_list`: optional - a named list containing reordered factor values, e.g. `list(Group = c('GroupHealthy', 'GroupTreatment1', 'GroupTreatment2'))`
+- `continuous_modifier_list`: optional - a named list containing functions to alter continuous variables, e.g. `list(Age = function (x) x / 365)` to change ages in days to ages in years.
+- `contrast_matrix`: optional - best to let the function create the contrast matrix for you.
+- `adjust_method`: optional - the method used to correct for multiple comparisons, listed [here](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/p.adjust).
+- `rownames`: optional - a custom vector of names to be used if you don't wish the names to be automatically derived from taxonomy.
+- `tax_id_col`: optional - the phyloseq object `tax_table` column you wish to use for naming - this should match the level being tested (and should also match the deepest taxonomic level in the phyloseq object - if you want to test a higher level then agglomerate the data using the `phyloseq::tax_glom()` function). If you do not provide this, then the function will automatically select the deepest level (i.e. the right-most `tax_table` column that isn't comprised of all `NA` values).
+- `adj_pval_threshold` (default = 0.05): the minimum level deemed significant.
+- `logFC_threshold` (default = 1): the minimum log-fold change deemed meaningful.
+- `legend_metadata_string`: optional - a custom name for colour or fill options.
+- `volc_plot_title`: optional - a custom title for the volcano plot (will be reused for the associated bar plots and individual feature plots).
+- `volc_plot_subtitle`: optional - a custom subtitle for the volcano plot (will be reused for the associated bar plots and individual feature plots).
+- `volc_plot_xlab`: optional - a custom x label for the volcano plot.
+- `volc_plot_ylab`: optional - a custom y label for the volcano plot.
+- `remove_low_variance_taxa` (default = FALSE): optional - if TRUE, the phyloseq OTU table will be checked for feature-wise variance, and all features with zero variance will be removed prior to downstream analysis. Limma may throw an error if most of the features have no variance, so this step is sometimes required for certain datasets.
+- `plot_output_folder`: optional - the path to a folder where you would like output plots to be saved. If left blank, no plots will be saved.
+- `plot_file_prefix`: optional - a string to attach to the start of the individual file names for your plots. This input is only used if the `plot_output_folder` argument is also provided.
+
+### Function output
+
+The function will return a list with different outputs from the function.
+
+- `input_data`: the original OTU data used to run the analysis.
+- `input_metadata`: a data.frame with the original metadata you provided.
+- `test_variables`: a data.frame with the subset of metadata variables used for the analysis.
+- `model_matrix`: the model matrix generated (or provided) to the function.
+- `constrast_matrix` OR `coefficients`: either the contrast matrix used, or the coefficients selected, depending on the analysis you chose to run.
+- `limma_significant`: a list of data.frames containing the signficant taxa determined by the limma function, with the adjusted p-value and logFC threshold selected, for each comparison/coefficient.
+- `limma_all`: a list of data.frames containing the significance levels of DA analysis for all taxa for each comparison/coefficient.
+- `volcano_plots`: volcano plots for each of the comparisons/coefficients selected.
+- `bar_plots`: bar plots combining significant features for each of the comparisons/coefficients selected. The x-axis shows the log2FC value calculated by limma, with feature names on the y-axis, ordered by the effect magnitude.
+- `feature_plots`: individual box plots for each feature, for each of the comparisons/coefficients selected. A significance bar will only be shown for the groups being compared, however all groups (if there are more than two) will be plotted for reference.
+- `venn_diagram`: a Venn diagram that will show up when you run the function.
+
+If a plot output folder path is provided, for each comparison/coefficient you have selected, three output .pdf files will be generated (provided there is at least 1 significant difference detected):
+
+- `{plot_file_prefix}_{test_variable + group}_volcplot.pdf`: a volcano plot showing all features, with significant feaetures labelled, decreased features in blue and increased features in red.
+- `{plot_file_prefix}_{test_variable + group}_barplot.pdf`: a bar plot showing significant features, with the log2FC on the x-axis and feature name on the y-axis. The y-axis is ordered by the log2FC magnitude, with the lowest at the bottom and highest at the top. Negative log2FC features are coloured blue, while positive ones are coloured red. The output plot automatically resizes depending on the number of variables being plotted.
+- `{plot_file_prefix}_{test_variable + group}_featureplots.pdf`: individual box plots for each feature, for each of the comparisons/coefficients selected. A significance bar will only be shown for the groups being compared, however all groups (if there are more than two) will be plotted for reference. These plots are arranged with 12 features to a page (3 columns and 4 rows). Multiple pages will be combined into a single output .pdf file if there are more than 12 significant features.
+
+### Continuous example
+
+If we have longitudinal microbiome sampling, we may want to know which taxa change with time. As there is likely to be little change on a day-to-day basis, we can also modify the age information from days to years. Furthermore, we can even control for potentially confounding factors like individual variation.
+
+```{r}
+# Run custom limma continuous function for taxa vs age
+bact_limma_age <- phyloseq_limma(phyloseq_object = bact_kraken2_logCSS,
+                                 model_formula_as_string = '~ Age + Individual',
+                                 continuous_modifier_list = list(Age = function (x) x / 365),
+                                 coefficients = 2,
+                                 volc_plot_title = 'Differentially Abundant Taxa over Time',
+                                 volc_plot_xlab = 'log2FC/year')
+
+# View volcano plot
+bact_limma_age$volcano_plots$Age
+```
+
+This will produce a volcano plot that looks something like this (the taxa names have been omitted, but will normally appear):
+
+<div align="center">
+  <img src="./assets/bact_volc_plot.png" width=75%>
+</div>
+
+In another example looking at differences between treatment groups, the bar plot produced looks like this:
+
+<div align="center">
+  <img src="./assets/tx_group_groupDrugXYZ_barplot.jpeg" width=75%>
+</div>
+
+An example of the feature plots output for a categorical explanatory variable is shown here:
+
+<div align="center">
+  <img src="./assets/tx_group_groupDrugXYZ_featureplots.jpeg" width=75%>
+</div>
+
+Or an example of the feature plots output for a continuous explanatory variable is shown here:
+
+<div align="center">
+  <img src="./assets/tx_group_groupDrugXYZ_featureplots2.jpg" width=75%>
+</div>
+
+### Splitting a phyloseq object for differential abundance analysis
+
+When we split up the phyloseq temporarily for investigation of [beta diversity](#beta-diversity), we saw that there appears to be some good separation of groups at days 7, 14, and 21 post-treatment. Therefore we will probably decide to do some differential abundance testing, and the `phyloseq_limma()` function above can handle this for us, as well as generate and save all of the relevant exploratory plots we will want initially to inspect the differences between groups.
+
+Because lists are a great way to keep everything organised (and minimise the growing number of variables in your R environment), we will separate the phyloseq object into multiple subsets (one for each time point), and store these within a list called `input_data`, which itself sits inside a main list that will house both the input data and the results from statistical analyses of that input data &ndash; you may want to run several variations with different statistical thresholds or test variable combinations for example. By storing everything in a master list, you keep all the inputs and outputs together.
+
+#### Creating the master list
+
+We will separate the bacteria by time and store these "sub-`phyloseq` objects" within a container list called `input_data`. This container object is a sub-list that contains each of the datasets separated by time, and sits inside a "master list" that will also hold any statistical tests we run on the data.
+
+```r
+# Split the data by time
+bact_time_split <- list(input_data = list(day0 = subset_samples(bact_data_logCSS, days_postTx == '0'),
+                                          day7 = subset_samples(bact_data_logCSS, days_postTx == '7'),
+                                          day14 = subset_samples(bact_data_logCSS, days_postTx == '14'),
+                                          day21 = subset_samples(bact_data_logCSS, days_postTx == '21'),
+                                          day28 = subset_samples(bact_data_logCSS, days_postTx == '28')))
+```
+
+The data now has the following structure:
+
+```r
+bact_time_split # class = list
+  |
+  |---input_data # class = list
+        |
+        |---day0 # class = phyloseq
+        |---day7 # class = phyloseq
+        |---day14 # class = phyloseq
+        |---day21 # class = phyloseq
+        |---day28 # class = phyloseq
+```
+
+#### Looping through the master list to test for DA taxa
+
+From here, we can loop through the `phyloseq` objects contained within the `input_data` list, and run `phyloseq_limma()`.
+
+```r
+# Loop over the custom phyloseq_limma function
+bact_time_split$limma_groupDA_ASV <- list() # create an empty list to store outputs
+for (day in names(bact_time_split$input_data)) { # loop over the names in 'input_data', assigning each successively to the 'day' variable
+  bact_phyloseq <- bact_time_split$input_data[[day]] # retrieve the appropriate phyloseq object
+  limma_groupDA <- phyloseq_limma(phyloseq_object = bact_phyloseq,
+                                  tax_id_col = 'ID', # the ASV ID column is just 'ID'
+                                  model_formula_as_string = '~ group',
+                                  coefficients = 2,
+                                  plot_output_folder = here::here('figures', 'limma_DA', 'treatment_group', 'ASV'), # output plots will be saved here
+                                  plot_file_prefix = paste0('tx_group_', day),
+                                  volc_plot_title = paste0('DA ASVs - ', day, ' post-treatment'))
+  bact_time_split$limma_groupDA_ASV[[day]] <- limma_groupDA # add the output from the limma function to the list
+}
+```
+
+After this step, our data now has the following structure:
+
+```r
+bact_time_split # class = list
+  |
+  |---input_data # class = list
+  |     |
+  |     |---day0 # class = phyloseq
+  |     |---day7 # class = phyloseq
+  |     |---day14 # class = phyloseq
+  |     |---day21 # class = phyloseq
+  |     |---day28 # class = phyloseq
+  |
+  ----limma_groupDA_ASV # class = list
+        |
+        |---day0 # class = list
+        |     |
+        |     |---input_data # class = data.frame
+        |     |---input_metadata # class = data.frame
+        |     |---test_variables # class = data.frame
+        |     |---model_matrix # class = double
+        |     |---coefficients # class = double
+        |     |---limma_significant # class = list
+        |     |     |
+        |     |     |---groupDrugXYZ # class = data.frame
+        |     |
+        |     |---limma_all # class = list
+        |     |     |
+        |     |     |---groupDrugXYZ # class = data.frame
+        |     |
+        |     |---volcano_plots # class = list
+        |     |     |
+        |     |     |---groupDrugXYZ # class = ggplot
+        |     |
+        |     |---bar_plots # class = list
+        |     |     |
+        |     |     |---groupDrugXYZ # class = ggplot
+        |     |
+        |     |---feature_plots # class = list
+        |     |     |
+        |     |     |---groupDrugXYZ # class = list
+        |     |           |
+        |     |           |---significant_feature1 # class = ggplot
+        |     |           |---significant_feature2 # class = ggplot
+        |     |           |---etc.
+        |     |
+        |     |---venn_diagram
+        |
+        |---day7 # class = list (as per day0)
+        |---day14 # class = list (as per day0)
+        |---day21 # class = list (as per day0)
+        |---day28 #class = list (as per day0)
+```
+
+The major benefit of organising our data in this way is that is keeps all analyses we run combined in the same place. We could even choose to organise our data this way even if we weren't splitting the original `phyloseq`.
+
+In the same way that we added the empty `limma_groupDA_ASV` list to our master list, we could add another empty list, e.g. `limma_geneY_ASV`, to look at how microbial abundance may be altered by expression of "gene Y", or any other number of variables. 
+
+The main thing is that all analyses relating to a particular `phyloseq` object or set of split `phyloseq` objects are contained in the same place. How tidy!
