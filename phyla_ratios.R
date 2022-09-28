@@ -1,3 +1,9 @@
+############################################################################################
+# Copyright (c) 2022 - Mucosal Immunology Lab, Monash University, Melbourne, Australia     #
+# Author: Matthew Macowan                                                                  #
+# This script is provided under the MIT licence (see LICENSE.txt for details)              #
+############################################################################################
+
 # Function to calculate the ratio of different phyla
 phyla_ratios <- function(phyloseq_object = NULL, test_variable = NULL, average_reads_threshold = 1000,
                          plot_output_folder = NULL, plot_file_prefix = NULL) {

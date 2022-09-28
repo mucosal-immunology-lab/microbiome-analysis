@@ -752,3 +752,9 @@ In the same way that we added the empty `limma_groupDA_ASV` list to our master l
 The main thing is that all analyses relating to a particular `phyloseq` object or set of split `phyloseq` objects are contained in the same place. How tidy!
 
 <kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
+## Rights
+
+* Copyright &copy; 2022 &ndash; Mucosal Immunology Lab, Melbourne VIC, Australia
+* Licence: These tools are provided under the MIT licence (see LICENSE file for details)
+* Authors: M. Macowan

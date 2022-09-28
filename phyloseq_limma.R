@@ -1,3 +1,9 @@
+############################################################################################
+# Copyright (c) 2022 - Mucosal Immunology Lab, Monash University, Melbourne, Australia     #
+# Author: Matthew Macowan                                                                  #
+# This script is provided under the MIT licence (see LICENSE.txt for details)              #
+############################################################################################
+
 phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condition = NULL, model_matrix = NULL,
                            model_formula_as_string = NULL, use_contrast_matrix = TRUE, coefficients = NULL,
                            factor_reorder_list = NULL, continuous_modifier_list = NULL,

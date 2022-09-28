@@ -1,3 +1,9 @@
+############################################################################################
+# Copyright (c) 2022 - Mucosal Immunology Lab, Monash University, Melbourne, Australia     #
+# Author: Matthew Macowan                                                                  #
+# This script is provided under the MIT licence (see LICENSE.txt for details)              #
+############################################################################################
+
 # Function to prepare and save OTU tables
 otu_to_csv <- function(phyloseq_object, output_filename) {
   otu_table <- data.frame(otu_table(phyloseq_object))
