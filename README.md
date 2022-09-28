@@ -1,6 +1,6 @@
 # Microbiome Analysis
 
-Here we will provide a selection of analytical tools and utilities for the processing of microbiome data derived from either 16S rRNA amplicon sequencing or shotgun metagenomics.
+Here we will provide a selection of analytical approaches, tools, and utilities for the processing of microbiome data derived from either 16S rRNA amplicon sequencing or shotgun metagenomics.
 
 ## Table of Contents
 
