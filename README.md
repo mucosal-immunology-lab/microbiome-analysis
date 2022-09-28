@@ -25,6 +25,13 @@ Here we will provide a selection of analytical tools and utilities for the proce
     - [Data preparation](#data-preparation)
     - [Taxonomic barplot by group](#taxonomic-barplot-by-group)
     - [Taxonomic composition by individual](#taxonomic-composition-by-individual)
+  - [Limma wrapper function for differential abundance testing](#limma-wrapper-function-for-differential-abundance-testing)
+    - [Arguments for `phyloseq_limma()`](#arguments-for-phyloseq_limma)
+    - [Function output](#function-output)
+    - [Continuous example](#continuous-example)
+    - [Splitting a phyloseq object for differential abundance analysis](#splitting-a-phyloseq-object-for-differential-abundance-analysis)
+      - [Creating the master list](#creating-the-master-list)
+      - [Looping through the master list to test for DA taxa](#looping-through-the-master-list-to-test-for-da-taxa)
 
 ## Processing of raw data
 
