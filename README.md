@@ -386,4 +386,83 @@ The resulting output file looks like this:
 
 ## Taxonomic composition
 
-To investigate
+To investigate sample taxonomic composition, we can either look at the average composition of groups (using some sample metadata variable) or at the composition of each individual sample.
+
+In either case, we will first need to filter the taxa using the `microbiome::core()` function to increase the clarity of the resulting barplots. We will place that within the `phyloseq::tax_glom()` function &ndash; to agglomerate to the genus level for example &ndash; and then transform the data to compositional form, and use the `phyloseq::psmelt()` function to pivot the data longer for plotting with `ggplot2`.
+
+### Data preparation
+
+```r
+# Filter taxa to increase clarity of barplots
+bact_data_tax <- psmelt(microbiome::transform(tax_glom(core(bact_data_filtered, detection = 10, prevalence = 0.2), 
+                                                       'Genus', NArm = T), transform = 'compositional', target = 'OTU'))
+```
+
+Next, we will prepare a colour vector for the barplots using the `RColorBrewer` package.
+
+```r
+# Prepare colours for plotting
+library(RColorBrewer)
+qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+```
+
+### Taxonomic barplot by group
+
+We will first plot the "average" barplot using a grouping variable. This could be a treatment group, time frame, etc. In this example, we will continue on with the drug treatment example from above, using the treatment as our grouping variable and also facet by time frame (by passing the `facet_col_labels` vector we created above to the `labeller` argument of `facet_grid()`).
+
+```r
+# Plot taxonomic composition by group over time
+(bact_taxonomy_gen <- ggplot(bact_data_tax, aes(x = group, y = Abundance, fill = Genus, NArm = FALSE)) +
+    geom_bar(stat = 'identity', position = 'fill', size = 0.01) +
+    scale_fill_manual(values = col_vector) + # use the colour vector we created
+    labs(title = 'Genera Distribution vs Treatment Group',
+         x = 'Treatment Group',
+         y = 'Abundance') +
+    theme(legend.key.size = unit(3.5, 'mm'), # change the size of each legend box
+          legend.position = 'bottom',
+          plot.margin = margin(0.25, 3, 0.25, 1.5, unit = 'cm'), # increase margins around the plot
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) + # rotate x-axis labels
+    facet_grid(cols = vars(days_postTx), labeller = as_labeller(facet_col_labels))
+)
+ggsave(here::here('figures', 'composition', 'bact_taxonomy_genera_by_time.pdf'), bact_taxonomy_gen,
+       width = 20, height = 15, units = 'cm')
+```
+
+The resulting output file looks like this:
+
+<div align="center">
+  <img src="./assets/bact_taxonomy_genera_by_time.jpg" width = 75%>
+</div>
+
+### Taxonomic composition by individual
+
+Seeing as we also know the IDs of the animals, we can also plot the taxonomic composition for each individual over time, facetting by both group and time frame.
+
+*We also need to add the treatment names to the end of the `facet_col_labels` vector here, because we are now facetting by two factors. The `labeller` just takes a single named vector for all labels.*
+
+```r
+# Barplot of abundance for each individual by group over time
+(bact_taxonomy_gen_rat <- ggplot(bact_data_tax, aes(x = rat_id, y = Abundance, fill = Genus, NArm = FALSE)) +
+    geom_bar(stat = 'identity', position = 'fill', size = 0.01) +
+    scale_fill_manual(values = col_vector) +
+    labs(title = 'Genera Distribution vs Treatment Group',
+         x = 'Rat',
+         y = 'Abundance') +
+    theme(legend.key.size = unit(3.5, 'mm'),
+          legend.position = 'bottom',
+          plot.margin = margin(0.25, 3, 0.25, 2.25, unit = 'cm'),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+    facet_grid(row = vars(days_postTx), cols = vars(group), scales = 'free', labeller = as_labeller(c(facet_col_labels,
+                                                                                                      'Sham' = 'Sham',
+                                                                                                      'DrugXYZ' = 'DrugXYZ')))
+)
+ggsave(here('figures', 'composition', 'bact_taxonomy_gen_rat_by_time.pdf'), bact_taxonomy_gen_rat,
+       width = 20, height = 20, units = 'cm')
+```
+
+The resulting output file looks like this:
+
+<div align="center">
+  <img src="./assets/bact_taxonomy_gen_rat_by_time.jpg" width = 75%>
+</div>
