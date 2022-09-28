@@ -43,6 +43,8 @@ Please refer to the relevant pipeline for processing of raw sequencing reads:
 * 16S rRNA amplicon sequencing: [DADA2 pipeline](https://github.com/respiratory-immunology-lab/microbiome-dada2)
 * Shotgun metagenomics: [Sunbeam pipeline](https://github.com/respiratory-immunology-lab/microbiome-shotgun)
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Downstream preprocessing - 16S rRNA amplicon sequencing
 
 After completing the steps in the DADA2 pipeline, you should have three input files for generation of a `phyloseq` object (a container object to hold your taxa counts, information, and sample data):
@@ -110,6 +112,8 @@ bact_data_raw <- phyloseq(OTU, TAX, samples)
 rm(list = c('otu_mat', 'tax_mat', 'samples_df', 'OTU', 'TAX'))
 ```
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Downstream preprocessing - Shotgun metagenomics
 
 Given that much of the quality control and filtering of our shotgun metagenomic data has already taken place using the Sunbeam pipeline, and we also have taxonomic assignments using the combined power of the Kraken2 and Bracken tools, we do not require as much local pre-processing of data in R before downstream analysis.
@@ -163,6 +167,8 @@ bact_data_raw <- subset_taxa(bact_data_raw, kingdom == 'Bacteria')
 rm(list = c('otu_mat', 'tax_mat', 'samples_df', 'OTU', 'TAX'))
 ```
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Filtering and normalisation
 
 At this stage, we should now have a single, unified `phyloseq` object that contains all of our count data, taxonomic information, and sample metadata:
@@ -201,6 +207,8 @@ kable(data_summary) %>%
 saveRDS(bact_data_filtered, here::here('output', 'bact_data_filtered.rds'))
 ```
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ### Diversity
 
 We can add Shannon diversity index information at this time, so it will be incorporated into any normalised datasets.
@@ -209,6 +217,8 @@ We can add Shannon diversity index information at this time, so it will be incor
 # Estimate Shannon index
 sample_data(bact_data_filtered)$Diversity <- estimate_richness(bact_data_filtered, split = TRUE, measures = c('Shannon'))$Shannon
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ### Normalisation
 
@@ -241,6 +251,8 @@ bact_data_logCSS <- microbiome::transform(bact_data_CSS, transform = 'log')
 saveRDS(bact_data_logCSS, here('output', 'bact_data_logCSS.rds'))
 ```
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ### Write OTU tables to `.csv` files
 
 At this point, we can also write each of the OTU tables to `.csv` files using the `otu_to_csv()` function provided [here](./otu_to_csv.R).
@@ -252,6 +264,8 @@ otu_to_csv(bact_data_CLR, here::here('output', 'otu_table_bact_data_CLR.csv'))
 otu_to_csv(bact_data_CSS, here::here('output', 'otu_table_bact_data_CSS.csv'))
 otu_to_csv(bact_data_logCSS, here::here('output', 'otu_table_bact_data_logCSS.csv'))
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ### Data agglomeration
 
@@ -272,6 +286,8 @@ saveRDS(bact_genus_logCSS, here::here('output', 'bact_genus_logCSS.rds'))
 otu_to_csv(bact_genus_filtered, here::here('output', 'otu_tables', 'otu_table_bact_genus_filtered.csv'))
 otu_to_csv(bact_genus_logCSS, here::here('output', 'otu_tables', 'otu_table_bact_genus_logCSS.csv'))
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ## Alpha diversity
 
@@ -352,6 +368,8 @@ That would produce this plot:
     <img src="./assets/bact_diversity_by_time.jpg" width=75%>
 </p>
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Beta diversity
 
 Beta diversity represents **between-sample** diversity. Continuing on from our example above, because the taxonomic composition may vary greatly with time, if we were to plot ordination plots for all samples together, we may lose clarity and minimise resolution/separation of data points at each of the time points individually.
@@ -398,6 +416,8 @@ The resulting output file looks like this:
   <img src="./assets/bact_PCoA_ordination_by_time.jpeg" width = 75%>
 </div>
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Taxonomic composition
 
 To investigate sample taxonomic composition, we can either look at the average composition of groups (using some sample metadata variable) or at the composition of each individual sample.
@@ -420,6 +440,8 @@ library(RColorBrewer)
 qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
 col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ### Taxonomic barplot by group
 
@@ -448,6 +470,8 @@ The resulting output file looks like this:
 <div align="center">
   <img src="./assets/bact_taxonomy_genera_by_time.jpg" width = 75%>
 </div>
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ### Taxonomic composition by individual
 
@@ -481,6 +505,8 @@ The resulting output file looks like this:
   <img src="./assets/bact_taxonomy_gen_rat_by_time.jpg" width = 75%>
 </div>
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ## Ratios between bacterial phyla
 
 In particular the ratio between Firmicutes and Bacteroidetes is a popular measure, often used in assessing the health of the gastrointestinal microbiome. That said, we can look at the ratios of all phyla using the [`phyla_ratios()`](./phyla_ratios.R) function we provide here.
@@ -505,6 +531,8 @@ An example of the output `.pdf` file is shown here:
 <div align="center">
   <img src="./assets/phyla_ratios.jpg" width=75%>
 </div>
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ## Limma wrapper function for differential abundance testing
 
@@ -564,6 +592,8 @@ If a plot output folder path is provided, for each comparison/coefficient you ha
 - `{plot_file_prefix}_{test_variable + group}_barplot.pdf`: a bar plot showing significant features, with the log2FC on the x-axis and feature name on the y-axis. The y-axis is ordered by the log2FC magnitude, with the lowest at the bottom and highest at the top. Negative log2FC features are coloured blue, while positive ones are coloured red. The output plot automatically resizes depending on the number of variables being plotted.
 - `{plot_file_prefix}_{test_variable + group}_featureplots.pdf`: individual box plots for each feature, for each of the comparisons/coefficients selected. A significance bar will only be shown for the groups being compared, however all groups (if there are more than two) will be plotted for reference. These plots are arranged with 12 features to a page (3 columns and 4 rows). Multiple pages will be combined into a single output .pdf file if there are more than 12 significant features.
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ### Continuous example
 
 If we have longitudinal microbiome sampling, we may want to know which taxa change with time. As there is likely to be little change on a day-to-day basis, we can also modify the age information from days to years. Furthermore, we can even control for potentially confounding factors like individual variation.
@@ -605,6 +635,8 @@ Or an example of the feature plots output for a continuous explanatory variable 
   <img src="./assets/tx_group_groupDrugXYZ_featureplots2.jpg" width=75%>
 </div>
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ### Splitting a phyloseq object for differential abundance analysis
 
 When we split up the phyloseq temporarily for investigation of [beta diversity](#beta-diversity), we saw that there appears to be some good separation of groups at days 7, 14, and 21 post-treatment. Therefore we will probably decide to do some differential abundance testing, and the `phyloseq_limma()` function above can handle this for us, as well as generate and save all of the relevant exploratory plots we will want initially to inspect the differences between groups.
@@ -637,6 +669,8 @@ bact_time_split # class = list
         |---day21 # class = phyloseq
         |---day28 # class = phyloseq
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 #### Looping through the master list to test for DA taxa
 
@@ -716,3 +750,5 @@ The major benefit of organising our data in this way is that is keeps all analys
 In the same way that we added the empty `limma_groupDA_ASV` list to our master list, we could add another empty list, e.g. `limma_geneY_ASV`, to look at how microbial abundance may be altered by expression of "gene Y", or any other number of variables. 
 
 The main thing is that all analyses relating to a particular `phyloseq` object or set of split `phyloseq` objects are contained in the same place. How tidy!
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
