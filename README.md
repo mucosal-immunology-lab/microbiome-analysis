@@ -63,7 +63,6 @@ The `highest_ClassID()` function is provided as a script [here](./highest_ClassI
 ```r
 # Load bacterial count table seqtab_nochim.rds and corresponding taxonomic classification taxonomy_species.rds
 bact_seqtab <- t(data.frame(readRDS(here::here('data', 'dada2', 'seqtab_nochim.rds'))))
-
 bact_taxonomy <- data.frame(readRDS(here::here('data', 'dada2', 'taxonomy_species.rds')))
 bact_tree <- readRDS(here::here('data', 'dada2', 'tree.rds'))
 
