@@ -478,6 +478,31 @@ The resulting output file looks like this:
   <img src="./assets/bact_taxonomy_gen_rat_by_time.jpg" width = 75%>
 </div>
 
+## Ratios between bacterial phyla
+
+In particular the ratio between Firmicutes and Bacteroidetes is a popular measure, often used in assessing the health of the gastrointestinal microbiome. That said, we can look at the ratios of all phyla using the [`phyla_ratios()`](./phyla_ratios.R) function we provide here.
+
+### Arguments for `phyla_ratios()`
+
+- `phyloseq_object`: a `phyloseq` object to use for differential abundance testing. This should be a `phyloseq` object containing raw (not normalised) counts.
+- `test_variable`: the name of a **single** column from the `sample_data` to be used for comparison of phyla ratios.
+- `average_reads_threshold` (default = 1000): optional - the minimum number of reads per sample on average that a phylum should have in order to be retained for analysis of ratios. Assessed by multiplying this value by the number of samples &ndash; if the row sums of a given phylum have less than `average_reads_threshold * number of samples`, it will be removed. 
+- `plot_output_folder`: optional - the path to a folder where you would like output plots to be saved. If left blank, no plots will be saved.
+- `plot_file_prefix`: optional - a string to attach to the start of the individual file names for your plots. This input is only used if the `plot_output_folder` argument is also provided.
+
+### Function output
+
+- `phyla_ratios`: a data.frame of the input data for each phylum-phylum comparison that passed thresholding, along with the ratio and test_variable.
+- `phyla_ratio_plots`: a `ggplot2` plot of each phylum-phylum comparison that passed thresholding, with either a Wilcoxon or Kruskal-Wallis statistic depending on the number of groups.
+- `stats_all`: a data.frame containing all pair-wise Wilcoxon Rank Sum testing statistics for each comparison.
+- `stats_signif`: a filtered version of `stats_all` containing only those comparisons with a p-value < 0.5.
+
+An example of the output `.pdf` file is shown here:
+
+<div align="center">
+  <img src="./assets/phyla_ratios.jpg" width=75%>
+</div>
+
 ## Limma wrapper function for differential abundance testing
 
 Say we now want to see whether there are bacteria that are differentially abundant according to a sample metadata variable we have available. Perhaps we have information about an individual's age at sampling, or we have some grouping information. This information can be input into a custom wrapper function around the popular `limma` package we provide here, called [`phyloseq_limma()`](./phyloseq_limma.R).
@@ -490,7 +515,7 @@ The minimum required arguments for `phyloseq_limma()` are:
 
 ### Arguments for `phyloseq_limma()`
 
-- `phyloseq_object`: a phyloseq object to use for differential abundance testing.
+- `phyloseq_object`: a `phyloseq` object to use for differential abundance testing.
 - `metadata_var`: optional - the name of a **single** column from the `sample_data` to use for DA testing (e.g. `metadata_var = 'group'`). **NOT** required if providing a formula - it will be changed to `NULL` if `model_formula_as_string` is also provided.
 - `metadata_condition`: optional - a conditional statement about a certain metadata value, e.g. keeping a certain age group only.
 - `model_matrix`: optional - best to let the function create the model matrix for you.
