@@ -35,6 +35,11 @@ Here we will provide a selection of analytical approaches, tools, and utilities 
     - [Splitting a phyloseq object for differential abundance analysis](#splitting-a-phyloseq-object-for-differential-abundance-analysis)
       - [Creating the master list](#creating-the-master-list)
       - [Looping through the master list to test for DA taxa](#looping-through-the-master-list-to-test-for-da-taxa)
+  - [Limma model selection](#limma-model-selection)
+    - [Arguments for `limma_best_model()`](#arguments-for-limma_best_model)
+    - [Function output](#function-output-2)
+    - [Example](#example)
+    - [Use of the output within `phyloseq_limma()`](#use-of-the-output-within-phyloseq_limma)
   - [Rights](#rights)
 
 ## Processing of raw data
