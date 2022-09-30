@@ -771,6 +771,8 @@ The function takes the primary variable you want to test, a set of additional va
 - `other_parameters`: a character vector of other `sample_data` columns you want to assess to determine whether they improve the fit of the model.
 - `selection_metric` (default = `'bic'`): the selection criterion metric you want to use to compare different model fits. The default is the BIC metric, but you can also use AIC (by changing the argument to `'aic'`).
 
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
+
 ### Function output
 
 The function will output a list with the following elements:
@@ -780,6 +782,8 @@ The function will output a list with the following elements:
 - `scores_plot`: a plot of the top 10 models. The x-axis of the plot shows the percentage of input taxa in your `phyloseq` object for which a given model is the best.
 - `model_scores`: a `data.frame` with the model scores output information.
 - `selection_metric`: a string containing the selection criterion metric you used, either `'AIC'` or `'BIC'`.
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ### Example
 
@@ -809,6 +813,8 @@ limma_il1a <- phyloseq_limma(phyloseq_object = bact_data_logCSS,
                              model_formula_as_string = bestmodel$formula_string,
                              coefficients = bestmodel$key_var_coef)
 ```
+
+<kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
 ## Rights
 
