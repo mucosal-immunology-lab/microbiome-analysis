@@ -17,6 +17,9 @@ limma_best_model <- function(phyloseq_object, key_variable = NULL, other_paramet
   if (is.null(key_variable)) {stop('Please provide the key variable you are interested in testing downstream.')}
   if (is.null(other_parameters)) {stop('Please provide additional variables for testing for the best model fit.')}
   
+  # Remove samples with NA values for the key_variable
+  phyloseq_object <- prune_samples(!is.na(sample_data(phyloseq_object)[[key_variable]]), phyloseq_object)
+  
   # Retrieve sample data and OTU table data
   model_matrix_data <- data.frame(sample_data(phyloseq_object))
   otu_data <- data.frame(otu_table(phyloseq_object))
