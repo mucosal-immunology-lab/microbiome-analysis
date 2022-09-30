@@ -753,6 +753,58 @@ The main thing is that all analyses relating to a particular `phyloseq` object o
 
 <kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>
 
+## Limma model selection
+
+If we have a selection of sample metadata that we are unsure whether or not to include in the model formula for `phyloseq_limma()`, we can use a wrapper around the `limma::selectModel()` function called `limma_best_model()`, provided [here](./limma_best_model.R).
+
+The function takes the primary variable you want to test, a set of additional variables you want to assess for inclusion, and the `phyloseq` object for testing. You can also choose between Akaike's Information Criterion (AIC) or Bayesian Information Criterion (BIC) as your selection methods.
+
+### Arguments for `limma_best_model()`
+
+- `phyloseq_object`: the `phyloseq` object you are assessing model fits for &ndash; this should be the same as the object you will use inside `phyloseq_limma()`.
+- `key_variable`: the name of the `sample_data` column of the variable you are interested in testing differential abundance for.
+- `other_parameters`: a character vector of other `sample_data` columns you want to assess to determine whether they improve the fit of the model.
+- `selection_metric` (default = `'bic'`): the selection criterion metric you want to use to compare different model fits. The default is the BIC metric, but you can also use AIC (by changing the argument to `'aic'`).
+
+### Function output
+
+The function will output a list with the following elements:
+
+- `formula_string`: the best model formula as a string (for direct use in `phyloseq_limma()`)
+- `key_var_coef`: the coefficients of the model that contain the `key_variable`, for direct use in `phyloseq_limma()`.
+- `scores_plot`: a plot of the top 10 models. The x-axis of the plot shows the percentage of input taxa in your `phyloseq` object for which a given model is the best.
+- `model_scores`: a `data.frame` with the model scores output information.
+- `selection_metric`: a string containing the selection criterion metric you used, either `'AIC'` or `'BIC'`.
+
+### Example
+
+An example of using this function is as follows:
+
+```r
+# Determine the best model
+bestmodel <- limma_best_model(phyloseq_object = bact_data_logCSS,
+                              key_variable = 'gene_expression_IL1a_brain_log',
+                              other_parameters = c('treatment', 'injury', 'sex'),
+                              selection_metric = 'bic')
+bestmodel$scores_plot
+```
+
+The output plot looks like this:
+
+<div align="center">
+  <img src="./assets/bic_output.jpg" width=75%>
+</div>
+
+### Use of the output within `phyloseq_limma()`
+
+The `phyloseq_limma()` function ideally wants to be given a model formula as a string and the coefficients it should be using. Therefore, we can use the outputs of `limma_best_model()` directly within the call to `phyloseq_limma()`, as shown here:
+
+```r
+limma_il1a <- phyloseq_limma(phyloseq_object = bact_data_logCSS,
+                             model_formula_as_string = bestmodel$formula_string,
+                             coefficients = bestmodel$key_var_coef)
+```
+
 ## Rights
 
 * Copyright &copy; 2022 &ndash; Mucosal Immunology Lab, Melbourne VIC, Australia
