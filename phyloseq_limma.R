@@ -11,7 +11,7 @@ phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condit
                            tax_id_col = NULL, adj_pval_threshold = 0.05, logFC_threshold = 1, 
                            legend_metadata_string = NULL, volc_plot_title = NULL, volc_plot_subtitle = NULL,
                            volc_plot_xlab = NULL, volc_plot_ylab = NULL, remove_low_variance_taxa = FALSE,
-                           plot_output_folder = NULL, plot_file_prefix = NULL) {
+                           plot_output_folder = NULL, plot_file_prefix = NULL, redo_boxplot_stats = FALSE) {
   # Load required packages
   pkgs <- c('BiocGenerics', 'base', 'ggtree', 'ggplot2', 'IRanges', 'Matrix', 'S4Vectors', 'biomformat', 'plotly', 
             'dplyr', 'rstatix', 'ggpubr', 'stats', 'phyloseq', 'SummarizedExperiment', 'ggpmisc', 'ggrepel', 'ggsci', 
@@ -55,6 +55,7 @@ phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condit
          This should be the case if you have generated your phyloseq object correctly, and ensured that 
          taxa_are_rows = TRUE. I.e. "OTU <- otu_table(otu_matrix, taxa_are_rows = TRUE)".')
   }
+  if (!dir.exists(plot_output_folder)) {dir.create(plot_output_folder)}
   
   # Set 'use_contrast_matrix' to FALSE if coefficients are provided
   if (!is.null(coefficients)) {
@@ -489,29 +490,56 @@ phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condit
           # Work out the y-positions for manual stats
           p_ydist <- diff(range(ps_sig[, taxa])) # Distance between min and max y values
           p_ymax <- max(ps_sig[, taxa]) # Max y value
+          num_levels <- length(levels(test_df[,k]))
           
-          y_position <- p_ymax + (p_ydist / 20)
-          
-          # Do stats and feed in values from limma
-          stats_manual <- wilcox_test(data = ps_sig, formula = as.formula(paste0('`', taxa, '` ~ ', k)), 
-                                      ref.group = levels(test_df[,k])[1], 
-                                      comparisons = list(c(levels(test_df[,k])[1], gsub(k, '', i)))) %>%
-            mutate(limma_padj = format(round(tt[taxa, 'adj.P.Val'], 6), scientific = TRUE),
-                   y.position = y_position)
-          
-          # Generate the plot
-          p <- ggplot(ps_sig, aes_string(x = k, y = as.name(taxa))) +
-            geom_boxplot(aes_string(fill = k)) +
-            geom_dotplot(binaxis = 'y', stackdir = 'center', binwidth = p_ydist / 30) +
-            stat_pvalue_manual(data = stats_manual, label = 'limma_padj', size = 3) +
-            scale_fill_jama(alpha = 0.6) +
-            guides(fill = 'none') + 
-            labs(title = taxa,
-                 x = str_to_sentence(k),
-                 y = 'Abundance') +
-            coord_cartesian(ylim = c(NA, p_ymax + (p_ydist / 10))) + 
-            theme(text = element_text(size = 8))
-          
+          # If using standard Wilcox comparison testing, make the normal plot
+          if (redo_boxplot_stats) {
+            # Generate comparisons for stat_compare_means
+            unique_levels <- unique(levels(test_df[,k]))
+            combinations <- flatten(lapply(seq_along(unique_levels), 
+                                           function(x) combn(unique_levels, x, FUN = list)))
+            combinations <- combinations[sapply(combinations, length) == 2]
+            discard <- str_detect(combinations, 'NA', negate = TRUE)
+            combinations <- combinations[discard]
+            for (comb in seq_along(combinations)) {
+              combinations[[comb]] <- sort(combinations[[comb]])
+            }
+            
+            # Generate the plot
+            p <- ggplot(ps_sig, aes_string(x = k, y = as.name(taxa))) +
+              geom_boxplot(aes_string(fill = k)) +
+              geom_dotplot(binaxis = 'y', stackdir = 'center', binwidth = p_ydist / 30) +
+              stat_compare_means(comparisons = combinations, size = 2.5) +
+              scale_fill_jama(alpha = 0.6) +
+              guides(fill = 'none') + 
+              labs(title = taxa,
+                   x = str_to_sentence(k),
+                   y = 'Abundance') +
+              coord_cartesian(ylim = c(NA, p_ymax + ((p_ydist / 4) * (num_levels - 1)))) + 
+              theme(text = element_text(size = 8))
+          } else {
+            y_position <- p_ymax + (p_ydist / 20)
+            
+            # Do stats and feed in values from limma
+            stats_manual <- wilcox_test(data = ps_sig, formula = as.formula(paste0('`', taxa, '` ~ ', k)), 
+                                        ref.group = levels(test_df[,k])[1], 
+                                        comparisons = list(c(levels(test_df[,k])[1], gsub(k, '', i)))) %>%
+              mutate(limma_padj = format(round(tt[taxa, 'adj.P.Val'], 6), scientific = TRUE),
+                     y.position = y_position)
+            
+            # Generate the plot
+            p <- ggplot(ps_sig, aes_string(x = k, y = as.name(taxa))) +
+              geom_boxplot(aes_string(fill = k)) +
+              geom_dotplot(binaxis = 'y', stackdir = 'center', binwidth = p_ydist / 30) +
+              stat_pvalue_manual(data = stats_manual, label = 'limma_padj', size = 3) +
+              scale_fill_jama(alpha = 0.6) +
+              guides(fill = 'none') + 
+              labs(title = taxa,
+                   x = str_to_sentence(k),
+                   y = 'Abundance') +
+              coord_cartesian(ylim = c(NA, p_ymax + (p_ydist / 10))) + 
+              theme(text = element_text(size = 8))
+          }
           p_list[[taxa]] <- p
         }
       }
