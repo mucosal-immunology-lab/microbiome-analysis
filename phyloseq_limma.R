@@ -230,15 +230,18 @@ phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condit
     cont_matrix
   }
   
-  # Create the contrasts matrix if none provided
-  if (is.null(contrast_matrix)) {
-    cont_matrix <- make_contrasts_vector(ps_limma_design)
-  } else {
-    cont_matrix <- contrast_matrix
-  }
+
   
   # Bayes statistics of differential expression
-  if (use_contrast_matrix) {
+  if(use_contrast_matrix) {
+    
+    # Create the contrasts matrix if none provided
+    if (is.null(contrast_matrix)) {
+      cont_matrix <- make_contrasts_vector(ps_limma_design)
+    } else {
+      cont_matrix <- contrast_matrix
+    }
+    
     fit2 <- contrasts.fit(fit, contrasts = cont_matrix)
   } else {
     if (is.null(coefficients)) {
@@ -496,7 +499,7 @@ phyloseq_limma <- function(phyloseq_object, metadata_var = NULL, metadata_condit
           if (redo_boxplot_stats) {
             # Generate comparisons for stat_compare_means
             unique_levels <- unique(levels(test_df[,k]))
-            combinations <- flatten(lapply(seq_along(unique_levels), 
+            combinations <- rlang::flatten(lapply(seq_along(unique_levels), 
                                            function(x) combn(unique_levels, x, FUN = list)))
             combinations <- combinations[sapply(combinations, length) == 2]
             discard <- str_detect(combinations, 'NA', negate = TRUE)
