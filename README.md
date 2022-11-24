@@ -4,6 +4,8 @@ Here we will provide a selection of analytical approaches, tools, and utilities 
 
 ## Table of Contents
 
+- [Microbiome Analysis](#microbiome-analysis)
+  - [Table of Contents](#table-of-contents)
   - [Processing of raw data](#processing-of-raw-data)
   - [Downstream preprocessing - 16S rRNA amplicon sequencing](#downstream-preprocessing---16s-rrna-amplicon-sequencing)
     - [Load bacterial 16S data](#load-bacterial-16s-data)
@@ -29,7 +31,7 @@ Here we will provide a selection of analytical approaches, tools, and utilities 
     - [Arguments for `phyla_ratios()`](#arguments-for-phyla_ratios)
     - [Function output](#function-output)
   - [Limma wrapper function for differential abundance testing](#limma-wrapper-function-for-differential-abundance-testing)
-    - [Arguments for `phyloseq_limma()`](#arguments-for-phyloseq_limma)
+    - [Arguments for `bio_limma()`](#arguments-for-bio_limma)
     - [Function output](#function-output-1)
     - [Continuous example](#continuous-example)
     - [Splitting a phyloseq object for differential abundance analysis](#splitting-a-phyloseq-object-for-differential-abundance-analysis)
@@ -39,7 +41,7 @@ Here we will provide a selection of analytical approaches, tools, and utilities 
     - [Arguments for `limma_best_model()`](#arguments-for-limma_best_model)
     - [Function output](#function-output-2)
     - [Example](#example)
-    - [Use of the output within `phyloseq_limma()`](#use-of-the-output-within-phyloseq_limma)
+    - [Use of the output within `bio_limma()`](#use-of-the-output-within-bio_limma)
   - [Rights](#rights)
 
 ## Processing of raw data
@@ -541,17 +543,17 @@ An example of the output `.pdf` file is shown here:
 
 ## Limma wrapper function for differential abundance testing
 
-Say we now want to see whether there are bacteria that are differentially abundant according to a sample metadata variable we have available. Perhaps we have information about an individual's age at sampling, or we have some grouping information. This information can be input into a custom wrapper function around the popular `limma` package we provide here, called [`phyloseq_limma()`](./phyloseq_limma.R).
+Say we now want to see whether there are bacteria that are differentially abundant according to a sample metadata variable we have available. Perhaps we have information about an individual's age at sampling, or we have some grouping information. This information can be input into a custom wrapper function around the popular `limma` package we provide here, called [`bio_limma()`](./bio_limma.R).
 
-The minimum required arguments for `phyloseq_limma()` are:
+The minimum required arguments for `bio_limma()` are:
 
-- `phyloseq_object`
+- `input_data`
 - `model_formula_as_string` or `metadata_var`
 - `coefficients` (not required in using `metadata_var`)
 
-### Arguments for `phyloseq_limma()`
+### Arguments for `bio_limma()`
 
-- `phyloseq_object`: a `phyloseq` object to use for differential abundance testing.
+- `input_data`: either a `phyloseq` object or a `SummarizedExperiment` object (containing metabolomics/lipidomics data and a feature naming column called `shortname`) to use for differential abundance testing.
 - `metadata_var`: optional - the name of a **single** column from the `sample_data` to use for DA testing (e.g. `metadata_var = 'group'`). **NOT** required if providing a formula - it will be changed to `NULL` if `model_formula_as_string` is also provided.
 - `metadata_condition`: optional - a conditional statement about a certain metadata value, e.g. keeping a certain age group only.
 - `model_matrix`: optional - best to let the function create the model matrix for you.
@@ -572,14 +574,14 @@ The minimum required arguments for `phyloseq_limma()` are:
 - `volc_plot_xlab`: optional - a custom x label for the volcano plot.
 - `volc_plot_ylab`: optional - a custom y label for the volcano plot.
 - `remove_low_variance_taxa` (default = FALSE): optional - if TRUE, the phyloseq OTU table will be checked for feature-wise variance, and all features with zero variance will be removed prior to downstream analysis. Limma may throw an error if most of the features have no variance, so this step is sometimes required for certain datasets.
-- `plot_output_folder`: optional - the path to a folder where you would like output plots to be saved. If left blank, no plots will be saved.
+- `plot_output_folder`: optional - the path to a folder where you would like output plots to be saved. If left blank, no plots will be saved. Will create a new folder if it does not exist only at the final level; i.e. the parent folder must still exist.
 - `plot_file_prefix`: optional - a string to attach to the start of the individual file names for your plots. This input is only used if the `plot_output_folder` argument is also provided.
 
 ### Function output
 
 The function will return a list with different outputs from the function.
 
-- `input_data`: the original OTU data used to run the analysis.
+- `input_data`: the original OTU or intensity data used to run the analysis.
 - `input_metadata`: a data.frame with the original metadata you provided.
 - `test_variables`: a data.frame with the subset of metadata variables used for the analysis.
 - `model_matrix`: the model matrix generated (or provided) to the function.
@@ -605,12 +607,12 @@ If we have longitudinal microbiome sampling, we may want to know which taxa chan
 
 ```{r}
 # Run custom limma continuous function for taxa vs age
-bact_limma_age <- phyloseq_limma(phyloseq_object = bact_kraken2_logCSS,
-                                 model_formula_as_string = '~ Age + Individual',
-                                 continuous_modifier_list = list(Age = function (x) x / 365),
-                                 coefficients = 2,
-                                 volc_plot_title = 'Differentially Abundant Taxa over Time',
-                                 volc_plot_xlab = 'log2FC/year')
+bact_limma_age <- bio_limma(input_data = bact_kraken2_logCSS,
+                            model_formula_as_string = '~ Age + Individual',
+                            continuous_modifier_list = list(Age = function (x) x / 365),
+                            coefficients = 2,
+                            volc_plot_title = 'Differentially Abundant Taxa over Time',
+                            volc_plot_xlab = 'log2FC/year')
 
 # View volcano plot
 bact_limma_age$volcano_plots$Age
@@ -644,7 +646,7 @@ Or an example of the feature plots output for a continuous explanatory variable 
 
 ### Splitting a phyloseq object for differential abundance analysis
 
-When we split up the phyloseq temporarily for investigation of [beta diversity](#beta-diversity), we saw that there appears to be some good separation of groups at days 7, 14, and 21 post-treatment. Therefore we will probably decide to do some differential abundance testing, and the `phyloseq_limma()` function above can handle this for us, as well as generate and save all of the relevant exploratory plots we will want initially to inspect the differences between groups.
+When we split up the phyloseq temporarily for investigation of [beta diversity](#beta-diversity), we saw that there appears to be some good separation of groups at days 7, 14, and 21 post-treatment. Therefore we will probably decide to do some differential abundance testing, and the `bio_limma()` function above can handle this for us, as well as generate and save all of the relevant exploratory plots we will want initially to inspect the differences between groups.
 
 Because lists are a great way to keep everything organised (and minimise the growing number of variables in your R environment), we will separate the `phyloseq` object into multiple subsets (one for each time point), and store these within a list called `input_data`, which itself sits inside a main list that will house both the input data and the results from statistical analyses of that input data &ndash; you may want to run several variations with different statistical thresholds or test variable combinations for example. By storing everything in a master list, you keep all the inputs and outputs together.
 
@@ -679,19 +681,19 @@ bact_time_split # class = list
 
 #### Looping through the master list to test for DA taxa
 
-From here, we can loop through the `phyloseq` objects contained within the `input_data` list, and run `phyloseq_limma()`.
+From here, we can loop through the `phyloseq` objects contained within the `input_data` list, and run `bio_limma()`.
 
 ```r
-# Loop over the custom phyloseq_limma function
+# Loop over the custom bio_limma function
 bact_time_split$limma_groupDA_ASV <- list() # create an empty list to store outputs
 for (day in names(bact_time_split$input_data)) { # loop over the names in 'input_data', assigning each successively to the 'day' variable
   bact_phyloseq <- bact_time_split$input_data[[day]] # retrieve the appropriate phyloseq object
-  limma_groupDA <- phyloseq_limma(phyloseq_object = bact_phyloseq,
-                                  model_formula_as_string = '~ group',
-                                  coefficients = 2,
-                                  plot_output_folder = here::here('figures', 'limma_DA', 'treatment_group', 'ASV'), # output plots will be saved here
-                                  plot_file_prefix = paste0('tx_group_', day),
-                                  volc_plot_title = paste0('DA ASVs - ', day, ' post-treatment'))
+  limma_groupDA <- bio_limma(phyloseq_object = bact_phyloseq,
+                             model_formula_as_string = '~ group',
+                             coefficients = 2,
+                             plot_output_folder = here::here('figures', 'limma_DA', 'treatment_group', 'ASV'), # output plots will be saved here
+                             plot_file_prefix = paste0('tx_group_', day),
+                             volc_plot_title = paste0('DA ASVs - ', day, ' post-treatment'))
   bact_time_split$limma_groupDA_ASV[[day]] <- limma_groupDA # add the output from the limma function to the list
 }
 ```
@@ -760,13 +762,13 @@ The main thing is that all analyses relating to a particular `phyloseq` object o
 
 ## Limma model selection
 
-If we have a selection of sample metadata that we are unsure whether or not to include in the model formula for `phyloseq_limma()`, we can use a wrapper around the `limma::selectModel()` function called `limma_best_model()`, provided [here](./limma_best_model.R).
+If we have a selection of sample metadata that we are unsure whether or not to include in the model formula for `bio_limma()`, we can use a wrapper around the `limma::selectModel()` function called `limma_best_model()`, provided [here](./limma_best_model.R).
 
 The function takes the primary variable you want to test, a set of additional variables you want to assess for inclusion, and the `phyloseq` object for testing. You can also choose between Akaike's Information Criterion (AIC) or Bayesian Information Criterion (BIC) as your selection methods.
 
 ### Arguments for `limma_best_model()`
 
-- `phyloseq_object`: the `phyloseq` object you are assessing model fits for &ndash; this should be the same as the object you will use inside `phyloseq_limma()`.
+- `input_data`: either a `phyloseq` object or a `SummarizedExperiment` object (containing metabolomics/lipidomics data) that you are assessing model fits for &ndash; this should be the same as the object you will use inside `bio_limma()`.
 - `key_variable`: the name of the `sample_data` column of the variable you are interested in testing differential abundance for.
 - `other_parameters`: a character vector of other `sample_data` columns you want to assess to determine whether they improve the fit of the model.
 - `selection_metric` (default = `'bic'`): the selection criterion metric you want to use to compare different model fits. The default is the BIC metric, but you can also use AIC (by changing the argument to `'aic'`).
@@ -777,9 +779,9 @@ The function takes the primary variable you want to test, a set of additional va
 
 The function will output a list with the following elements:
 
-- `formula_string`: the best model formula as a string (for direct use in `phyloseq_limma()`)
-- `key_var_coef`: the coefficients of the model that contain the `key_variable`, for direct use in `phyloseq_limma()`.
-- `scores_plot`: a plot of the top 10 models. The x-axis of the plot shows the percentage of input taxa in your `phyloseq` object for which a given model is the best.
+- `formula_string`: the best model formula as a string (for direct use in `bio_limma()`)
+- `key_var_coef`: the coefficients of the model that contain the `key_variable`, for direct use in `bio_limma()`.
+- `scores_plot`: a plot of the top 10 models. The x-axis of the plot shows the percentage of input for which a given model is the best.
 - `model_scores`: a `data.frame` with the model scores output information.
 - `selection_metric`: a string containing the selection criterion metric you used, either `'AIC'` or `'BIC'`.
 
@@ -804,14 +806,14 @@ The output plot looks like this:
   <img src="./assets/bic_output.jpg" width=75%>
 </div>
 
-### Use of the output within `phyloseq_limma()`
+### Use of the output within `bio_limma()`
 
-The `phyloseq_limma()` function ideally wants to be given a model formula as a string and the coefficients it should be using. Therefore, we can use the outputs of `limma_best_model()` directly within the call to `phyloseq_limma()`, as shown here:
+The `bio_limma()` function ideally wants to be given a model formula as a string and the coefficients it should be using. Therefore, we can use the outputs of `limma_best_model()` directly within the call to `bio_limma()`, as shown here:
 
 ```r
-limma_il1a <- phyloseq_limma(phyloseq_object = bact_data_logCSS,
-                             model_formula_as_string = bestmodel$formula_string,
-                             coefficients = bestmodel$key_var_coef)
+limma_il1a <- bio_limma(input_data = bact_data_logCSS,
+                        model_formula_as_string = bestmodel$formula_string,
+                        coefficients = bestmodel$key_var_coef)
 ```
 
 <kbd>[TOP OF PAGE](#microbiome-analysis)</kbd>

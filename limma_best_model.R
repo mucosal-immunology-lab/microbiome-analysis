@@ -5,7 +5,7 @@
 ############################################################################################
 
 # Define a function to select the best model formula from a selection of input parameters
-limma_best_model <- function(phyloseq_object, key_variable = NULL, other_parameters = NULL, selection_metric = 'bic') {
+limma_best_model <- function(input_data, key_variable = NULL, other_parameters = NULL, selection_metric = 'bic') {
   # Load required packages
   library(pacman)
   pkgs <- c('BiocGenerics', 'base', 'biomformat', 'IRanges', 'S4Vectors', 'dplyr', 'plotly', 
@@ -17,12 +17,31 @@ limma_best_model <- function(phyloseq_object, key_variable = NULL, other_paramet
   if (is.null(key_variable)) {stop('Please provide the key variable you are interested in testing downstream.')}
   if (is.null(other_parameters)) {stop('Please provide additional variables for testing for the best model fit.')}
   
-  # Remove samples with NA values for the key_variable
-  phyloseq_object <- prune_samples(!is.na(sample_data(phyloseq_object)[[key_variable]]), phyloseq_object)
+  # Define a function to ensure that character 'NA' values are switched with real 'NA' values
+  ensure_NA <- function(vector) {
+    replace(vector, vector == 'NA', NA)
+  }
   
-  # Retrieve sample data and OTU table data
-  model_matrix_data <- data.frame(sample_data(phyloseq_object))
-  otu_data <- data.frame(otu_table(phyloseq_object))
+  # Remove samples with NA values for the key_variable
+  if (class(input_data) == 'phyloseq') {
+    input_data <- prune_samples(!is.na(ensure_NA(sample_data(input_data)[[key_variable]])), input_data)
+    
+   # Retrieve sample data and OTU table data
+    model_matrix_data <- data.frame(sample_data(input_data))
+    count_data <- data.frame(otu_table(input_data))
+  }
+  if (class(input_data) == 'SummarizedExperiment') {
+    input_data <- input_data[, !is.na(ensure_NA(input_data@metadata$metadata[[key_variable]]))]
+    input_metadata <- input_data@metadata$metadata[!is.na(ensure_NA(input_data@metadata$metadata[[key_variable]])),]
+    
+    if (class(input_metadata[[key_variable]]) == 'factor') {
+      input_metadata[[key_variable]] <- droplevels(input_metadata[[key_variable]])
+    }
+    
+    # Retrieve sample data and counts data
+    model_matrix_data <- data.frame(input_metadata)
+    count_data <- data.frame(assay(input_data))
+  }
   
   # Prepare the combinations of test parameters provided
   combinations <- flatten(lapply(seq_along(c(key_variable, other_parameters)), function(x) combn(c(key_variable, other_parameters), x, FUN = list)))
@@ -42,7 +61,7 @@ limma_best_model <- function(phyloseq_object, key_variable = NULL, other_paramet
   }
   
   # Check for the best model
-  model_scores <- data.frame(table(limma::selectModel(otu_data, model_list, criterion = selection_metric)$pref),
+  model_scores <- data.frame(table(limma::selectModel(count_data, model_list, criterion = selection_metric)$pref),
                              model = combinations) %>%
     mutate(best = ifelse(Freq == max(Freq), 'Best', 'Other')) %>%
     arrange(desc(Freq)) %>%
@@ -71,7 +90,7 @@ limma_best_model <- function(phyloseq_object, key_variable = NULL, other_paramet
     guides(fill = 'none') +
     labs(title = 'Best Fitting Model',
          subtitle = plot_subtitle,
-         x = 'Model is Best for this\nPercentage of Taxa')
+         x = 'Model is Best for this\nPercentage of Features')
   print(scores_plot)
   
   # Retrieve the best model
