@@ -1,5 +1,5 @@
 ############################################################################################
-# Copyright (c) 2022 - Mucosal Immunology Lab, Monash University, Melbourne, Australia     #
+# Copyright (c) 2023 - Mucosal Immunology Lab, Monash University, Melbourne, Australia     #
 # Author: Matthew Macowan                                                                  #
 # This script is provided under the MIT licence (see LICENSE.txt for details)              #
 ############################################################################################
@@ -10,8 +10,9 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
                       contrast_matrix = NULL, adjust_method = 'BH', rownames = NULL, 
                       tax_id_col = NULL, adj_pval_threshold = 0.05, logFC_threshold = 1, 
                       legend_metadata_string = NULL, volc_plot_title = NULL, volc_plot_subtitle = NULL,
-                      volc_plot_xlab = NULL, volc_plot_ylab = NULL, remove_low_variance_taxa = FALSE,
-                      plot_output_folder = NULL, plot_file_prefix = NULL, redo_boxplot_stats = FALSE) {
+                      use_groups_as_subtitle = FALSE, volc_plot_xlab = NULL, volc_plot_ylab = NULL, 
+                      remove_low_variance_taxa = FALSE, plot_output_folder = NULL, plot_file_prefix = NULL, 
+                      redo_boxplot_stats = FALSE) {
   # Load required packages
   pkgs <- c('BiocGenerics', 'base', 'ggtree', 'ggplot2', 'IRanges', 'Matrix', 'S4Vectors', 'biomformat', 'plotly', 
             'dplyr', 'rstatix', 'ggpubr', 'stats', 'phyloseq', 'SummarizedExperiment', 'ggpmisc', 'ggrepel', 'ggsci', 
@@ -177,6 +178,11 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
   for (i in 1:ncol(test_df)) {
     if (class(test_df[, i]) == 'character' | class(test_df[, i]) == 'factor') {
       test_df[, i] <- ensure_NA(test_df[, i])
+      for (i in colnames(test_df)) {
+        if (class(test_df[, i]) == 'factor') {
+          test_df[, i] <- droplevels(test_df[, i])
+        }
+      }
     }
   }
   
@@ -295,12 +301,21 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
     # Run through each of the coefficients and add topTable to the list
     for (coef in 1:dim(fit2$contrasts)[2]) {
       coef_name <- colnames(fit2$contrasts)[coef]
+      comp_name <- paste0(str_to_sentence(str_extract(colnames(fit2$contrasts)[coef], 
+                                                      colnames(test_df))), 
+                          ': ',
+                          str_remove(colnames(fit2$contrasts)[coef], 
+                                     str_extract(colnames(fit2$contrasts)[coef], 
+                                                 colnames(test_df))), 
+                          ' vs. ', 
+                          levels(test_df[, str_extract(colnames(fit2$contrasts)[coef], colnames(test_df))])[1])
       bio_topTable <- topTable(fit2, number = dim(fit2)[1], adjust.method = adjust_method, coef = coef)
       if (top == TRUE) {
         bio_topTable <- bio_topTable %>%
           filter(adj.P.Val < adj_pval_threshold) %>%
           filter(abs(logFC) >= logFC_threshold)
       }
+      bio_topTable <- mutate(bio_topTable, comparison = comp_name)
       all_topTables[[coef_name]] <- bio_topTable
     }
     
@@ -372,6 +387,11 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
     
     # Make volcano plot for each topTable
     for (i in 1:length(topTable)) {
+      # If requested, generate group-based subtitle
+      if (use_groups_as_subtitle) {
+        plot_subtitle <- topTable[[i]]$comparison
+      }
+      # Make plots
       plot <- ggplot(topTable[[i]], aes(x = logFC, y = -log10(adj.P.Val))) +
         geom_point(aes(color = direction)) +
         geom_hline(yintercept = -log10(adj_pval_threshold), linetype = 2) +
@@ -382,7 +402,7 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
                         label = rownames(topTable[[i]][topTable[[i]]$adj.P.Val < adj_pval_threshold, ]),
                         size = 2) +
         labs(title = plot_title,
-             subtitle = plot_subtitle,
+             subtitle = plot_subtitle[i],
              x = plot_xlab,
              y = plot_ylab)
       
@@ -402,6 +422,11 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
     
     # Make bar plot for each topTable
     for (i in 1:length(topTable)) {
+      # If requested, generate group-based subtitle
+      if (use_groups_as_subtitle) {
+        plot_subtitle <- topTable[[i]]$comparison
+      }
+      # Make plots
       m <- topTable[[i]] %>%
         mutate(feature = rownames(topTable[[i]])) %>%
         arrange(abs(logFC)) %>%
@@ -437,9 +462,7 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
     plot_title <- volc_plot_title
   }
   
-  if (is.null(volc_plot_subtitle)) {
-    plot_subtitle <- NULL
-  } else {
+  if (!is.null(volc_plot_subtitle)) {
     plot_subtitle <- volc_plot_subtitle
   }
   
@@ -467,6 +490,11 @@ bio_limma <- function(input_data, metadata_var = NULL, metadata_condition = NULL
     for (i in names(topTable)) {
       # Retrive the topTable data
       tt <- topTable[[i]]
+      
+      # If requested, generate group-based subtitle
+      if (use_groups_as_subtitle) {
+        plot_subtitle <- topTable[[i]]$comparison
+      }
       
       # Retrieve the input data for just significant features
       bio_sig_init <- bio_limma_data[rownames(bio_limma_data) %in% rownames(tt),] %>%
