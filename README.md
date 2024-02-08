@@ -6,6 +6,6 @@ View the wiki [here](https://github.com/mucosal-immunology-lab/microbiome-analys
 
 ## Rights
 
-* Copyright &copy; 2022 &ndash; Mucosal Immunology Lab, Melbourne VIC, Australia
+* Copyright &copy; 2024 &ndash; Mucosal Immunology Lab, Melbourne VIC, Australia
 * Licence: These tools are provided under the MIT licence (see LICENSE file for details)
 * Authors: M. Macowan
